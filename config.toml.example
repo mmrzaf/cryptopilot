@@ -1,0 +1,98 @@
+# CryptoPilot Configuration File
+# Copy this file to ~/.cryptopilot/config.toml and customize
+
+# ============================================================================
+# API Configuration
+# ============================================================================
+[api]
+# Default data provider (options: coingecko, coinmarketcap, binance)
+default_provider = "coingecko"
+
+# API key (optional for CoinGecko, required for CoinMarketCap)
+api_key = ""
+
+# Request timeout in seconds
+request_timeout = 30
+
+# Maximum number of retries for failed requests
+max_retries = 3
+
+# Exponential backoff multiplier
+retry_backoff = 2.0
+
+# ============================================================================
+# Data Collection Configuration
+# ============================================================================
+[data]
+# Default timeframe for data collection (options: 1h, 4h, 1d, 1w)
+default_timeframe = "1d"
+
+# Default cryptocurrencies to track
+default_symbols = ["BTC", "ETH", "SOL", "ADA", "AVAX"]
+
+# How many days of historical data to retain
+retention_days = 730
+
+# Automatically check and fill data gaps
+gap_fill_check = true
+
+# Batch size for bulk operations
+batch_size = 100
+
+# ============================================================================
+# Analysis Configuration
+# ============================================================================
+[analysis]
+# Default analysis strategies to run
+# Options: trend_following, mean_reversion, momentum
+default_strategies = ["trend_following", "mean_reversion"]
+
+# Minimum confidence score to consider recommendations (0.0 to 1.0)
+confidence_threshold = 0.6
+
+# Your risk tolerance level (options: conservative, moderate, aggressive)
+# - conservative: Lower risk, fewer signals, higher confidence required
+# - moderate: Balanced approach
+# - aggressive: More signals, accepts lower confidence
+risk_tolerance = "moderate"
+
+# ============================================================================
+# Reporting & LLM Configuration
+# ============================================================================
+[reporting]
+# LLM provider for enhanced reports (options: ollama, openai, gemini, deepseek)
+llm_provider = "ollama"
+
+# Model to use (provider-specific)
+# Ollama: "gemma2:2b", "llama3.2:3b", etc.
+# OpenAI: "gpt-4", "gpt-3.5-turbo", etc.
+llm_model = "gemma3n:e4b"
+
+# Output formats (options: console, json, markdown, html)
+output_format = ["console", "json"]
+
+# Include personal portfolio context in reports
+include_personal_context = true
+
+# Custom LLM API endpoint (for Ollama or custom deployments)
+llm_api_base = "http://localhost:11434"
+
+# LLM API key (for OpenAI, Anthropic, etc.)
+llm_api_key = ""
+
+# ============================================================================
+# Currency Configuration
+# ============================================================================
+[currency]
+# Base currency for all valuations (USDT in Phase 1)
+# Note: All fiat amounts must be manually converted to USDT before input
+base_currency = "USDT"
+
+# ============================================================================
+# Global Settings
+# ============================================================================
+# Enable debug mode (verbose logging)
+debug = false
+
+# Logging level (options: DEBUG, INFO, WARNING, ERROR, CRITICAL)
+log_level = "INFO"
