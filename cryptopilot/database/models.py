@@ -126,8 +126,10 @@ class TradeRecord(BaseModel):
                 raise ValueError(f"Total cost {v} does not match calculation {expected}")
         return v
 
+
 class Position(BaseModel):
     """Derived position from trade history."""
+
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     symbol: str
@@ -142,11 +144,13 @@ class Position(BaseModel):
 
 class PositionWithMarketData(Position):
     """Position enriched with current market price and P&L."""
+
     current_price: Decimal = Field(gt=0)
     market_value: Decimal = Field(ge=0)
     unrealized_pnl: Decimal
     unrealized_pnl_pct: Decimal
     price_updated_at: datetime
+
 
 class BalanceSnapshotRecord(BaseModel):
     """Balance snapshot record."""
