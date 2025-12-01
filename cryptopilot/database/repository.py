@@ -1,8 +1,9 @@
 from collections.abc import Sequence
 from datetime import UTC, datetime
+from decimal import Decimal
 
-from cryptopilot.database.connection import DatabaseConnection, decimal_to_str
-from cryptopilot.database.models import MarketDataRecord, Timeframe
+from cryptopilot.database.connection import DatabaseConnection, decimal_to_str, str_to_decimal
+from cryptopilot.database.models import MarketDataRecord, Timeframe, TradeRecord, TradeSide
 
 
 def _to_utc(dt: datetime) -> datetime:
@@ -12,7 +13,7 @@ def _to_utc(dt: datetime) -> datetime:
     return dt.astimezone(UTC)
 
 
-class MarketDataRepository:
+class Repository:
     """Data-access layer for market_data table.
 
     All SQL related to market data lives here.
@@ -161,3 +162,125 @@ class MarketDataRepository:
             else:
                 raise TypeError(f"Unsupported timestamp type from DB: {type(ts)!r}")
         return timestamps
+
+
+    async def insert_trade(self, trade: TradeRecord) -> int:
+        """Insert a trade record.
+
+        Returns:
+            Row ID of inserted trade
+        """
+        query = """
+            INSERT INTO trades (
+                trade_id, symbol, side, quantity, price, fee,
+                total_cost, timestamp, account, notes, created_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """
+
+        cursor = await self._db.execute(
+            query,
+            (
+                str(trade.trade_id),
+                trade.symbol.upper(),
+                trade.side.value,
+                decimal_to_str(trade.quantity),
+                decimal_to_str(trade.price),
+                decimal_to_str(trade.fee),
+                decimal_to_str(trade.total_cost),
+                _to_utc(trade.timestamp).isoformat(),
+                trade.account,
+                trade.notes,
+                _to_utc(trade.created_at).isoformat(),
+            ),
+        )
+
+        return cursor.lastrowid or 0
+
+    async def list_trades(
+        self,
+        symbol: str | None = None,
+        account: str | None = None,
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
+        limit: int | None = None,
+    ) -> list[TradeRecord]:
+        """Query trades with filters."""
+        conditions = []
+        params: list[str] = []
+
+        if symbol:
+            conditions.append("symbol = ?")
+            params.append(symbol.upper())
+
+        if account:
+            conditions.append("account = ?")
+            params.append(account)
+
+        if start_date:
+            conditions.append("timestamp >= ?")
+            params.append(_to_utc(start_date).isoformat())
+
+        if end_date:
+            conditions.append("timestamp <= ?")
+            params.append(_to_utc(end_date).isoformat())
+
+        where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+        limit_clause = f"LIMIT {limit}" if limit else ""
+
+        query = f"""
+            SELECT * FROM trades
+            {where_clause}
+            ORDER BY timestamp DESC
+            {limit_clause}
+        """
+
+        rows = await self._db.fetch_all(query, tuple(params) if params else None)
+
+        trades: list[TradeRecord] = []
+        for row in rows:
+            trades.append(
+                TradeRecord(
+                    id=row["id"],
+                    trade_id=row["trade_id"],
+                    symbol=row["symbol"],
+                    side=TradeSide(row["side"]),
+                    quantity=str_to_decimal(row["quantity"]),
+                    price=str_to_decimal(row["price"]),
+                    fee=str_to_decimal(row["fee"]),
+                    total_cost=str_to_decimal(row["total_cost"]),
+                    timestamp=datetime.fromisoformat(row["timestamp"]),
+                    account=row["account"],
+                    notes=row["notes"],
+                    created_at=datetime.fromisoformat(row["created_at"]),
+                )
+            )
+
+        return trades
+
+    async def get_latest_price(
+        self,
+        symbol: str,
+    ) -> tuple[Decimal, datetime] | None:
+        """Get most recent price from market_data.
+
+        Returns:
+            (price, timestamp) or None if no data
+        """
+        query = """
+            SELECT close, timestamp
+            FROM market_data
+            WHERE symbol = ?
+            ORDER BY timestamp DESC
+            LIMIT 1
+        """
+
+        row = await self._db.fetch_one(query, (symbol.upper(),))
+
+        if row is None:
+            return None
+
+        price = str_to_decimal(row["close"])
+        timestamp = datetime.fromisoformat(row["timestamp"])
+
+        return price, _to_utc(timestamp)

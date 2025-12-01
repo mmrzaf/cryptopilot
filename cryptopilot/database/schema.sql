@@ -43,6 +43,7 @@ CREATE TABLE IF NOT EXISTS trades (
     fee TEXT NOT NULL DEFAULT '0',     -- DECIMAL as TEXT (in USD)
     total_cost TEXT NOT NULL,          -- DECIMAL as TEXT (in USD)
     timestamp TEXT NOT NULL,           -- ISO 8601 UTC
+    account TEXT DEFAULT 'default',  -- NEW: multi-account support
     notes TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now', 'utc'))
 );
@@ -52,6 +53,7 @@ CREATE INDEX IF NOT EXISTS idx_trades_symbol
 
 CREATE INDEX IF NOT EXISTS idx_trades_timestamp
     ON trades(timestamp DESC);
+CREATE INDEX IF NOT EXISTS idx_trades_account ON trades(account);
 
 -- Balance snapshots table
 CREATE TABLE IF NOT EXISTS balance_snapshots (

@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
 from cryptopilot.database.models import MarketDataRecord, Timeframe
-from cryptopilot.database.repository import MarketDataRepository
+from cryptopilot.database.repository import Repository
 from cryptopilot.providers.base import OHLCV, DataProviderBase
 from cryptopilot.utils.retry import RetryConfig, retry_with_backoff
 
@@ -41,7 +41,7 @@ class MarketDataCollector:
 
     def __init__(
         self,
-        repository: MarketDataRepository,
+        repository: Repository,
         provider: DataProviderBase,
         provider_name: str,
         base_currency: str,

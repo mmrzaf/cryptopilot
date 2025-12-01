@@ -11,15 +11,12 @@ from cryptopilot.collectors.market_data import MarketDataCollector
 from cryptopilot.config.settings import get_settings
 from cryptopilot.database.connection import DatabaseConnection
 from cryptopilot.database.models import Timeframe
-from cryptopilot.database.repository import MarketDataRepository
+from cryptopilot.database.repository import Repository
 from cryptopilot.providers.registry import create_provider
 from cryptopilot.utils.retry import RetryConfig
 
 console = Console()
 logger = logging.getLogger(__name__)
-
-app = typer.Typer(help="Market data collection commands")
-
 
 def _parse_symbols(arg: str | None, default_symbols: Sequence[str]) -> list[str]:
     if arg is None:
@@ -56,7 +53,7 @@ async def _run_collect(
     )
     await db.initialize()
 
-    repo = MarketDataRepository(db)
+    repo = Repository(db)
 
     provider = create_provider(
         provider_name,

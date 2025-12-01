@@ -4,11 +4,11 @@ from pathlib import Path
 from typing import Any
 
 import toml
-from pydantic import Field, field_validator
+from pydantic import BaseModel, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-class APIConfig(BaseSettings):
+class APIConfig(BaseModel):
     """API configuration."""
 
     default_provider: str = "coingecko"
@@ -18,7 +18,7 @@ class APIConfig(BaseSettings):
     retry_backoff: float = 2.0
 
 
-class DataConfig(BaseSettings):
+class DataConfig(BaseModel):
     """Data collection configuration."""
 
     default_timeframe: str = "1d"
@@ -28,7 +28,7 @@ class DataConfig(BaseSettings):
     batch_size: int = 100
 
 
-class AnalysisConfig(BaseSettings):
+class AnalysisConfig(BaseModel):
     """Analysis configuration."""
 
     default_strategies: list[str] = Field(
@@ -46,7 +46,7 @@ class AnalysisConfig(BaseSettings):
         return v.lower()
 
 
-class ReportingConfig(BaseSettings):
+class ReportingConfig(BaseModel):
     """Reporting and LLM configuration."""
 
     llm_provider: str = "ollama"
@@ -57,13 +57,13 @@ class ReportingConfig(BaseSettings):
     llm_api_key: str | None = None
 
 
-class CurrencyConfig(BaseSettings):
+class CurrencyConfig(BaseModel):
     """Currency configuration."""
 
     base_currency: str = "USD"
 
 
-class DatabaseConfig(BaseSettings):
+class DatabaseConfig(BaseModel):
     """Database configuration."""
 
     path: Path = Field(default_factory=lambda: Path.home() / ".cryptopilot" / "cryptopilot.db")
