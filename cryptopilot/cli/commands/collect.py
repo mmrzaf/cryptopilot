@@ -18,6 +18,7 @@ from cryptopilot.utils.retry import RetryConfig
 console = Console()
 logger = logging.getLogger(__name__)
 
+
 def _parse_symbols(arg: str | None, default_symbols: Sequence[str]) -> list[str]:
     if arg is None:
         return [s.upper() for s in default_symbols]
@@ -189,6 +190,16 @@ def collect_command(
         "--update-all",
         help="Incrementally update from last stored candle to now, "
         "instead of strictly enforcing the --days window.",
+    ),
+    fill_gaps: bool = typer.Option(
+        False,
+        "--fill-gaps",
+        help="Detect and fill gaps in existing data after collection.",
+    ),
+    continue_on_error: bool = typer.Option(
+        False,
+        "--continue-on-error",
+        help="Continue collecting other symbols if one fails.",
     ),
     dry_run: bool = typer.Option(
         False,
