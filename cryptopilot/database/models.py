@@ -69,7 +69,7 @@ class MarketDataRecord(BaseModel):
 
     id: int | None = None
     symbol: str = Field(min_length=1, max_length=10)
-    base_currency: str = Field(default="USDT")
+    base_currency: str = Field(default="USD")
     timestamp: datetime
     open: Decimal = Field(gt=0)
     high: Decimal = Field(gt=0)
@@ -122,9 +122,7 @@ class TradeRecord(BaseModel):
         if "quantity" in info.data and "price" in info.data and "fee" in info.data:
             expected = info.data["quantity"] * info.data["price"] + info.data["fee"]
             if abs(v - expected) > Decimal("0.01"):  # Allow small rounding
-                raise ValueError(
-                    f"Total cost {v} does not match calculation {expected}"
-                )
+                raise ValueError(f"Total cost {v} does not match calculation {expected}")
         return v
 
 

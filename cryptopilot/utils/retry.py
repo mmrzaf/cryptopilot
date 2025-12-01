@@ -109,9 +109,7 @@ def retry_async(
             if last_exception:
                 raise last_exception
 
-            raise RuntimeError(
-                f"{func.__name__} failed after {config.max_retries} retries"
-            )
+            raise RuntimeError(f"{func.__name__} failed after {config.max_retries} retries")
 
         return wrapper
 
