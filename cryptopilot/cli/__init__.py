@@ -5,6 +5,7 @@ from rich.console import Console
 from rich.logging import RichHandler
 
 from cryptopilot.cli.commands.collect import collect_command
+from cryptopilot.cli.commands.portfolio import app as portfolio_app
 from cryptopilot.cli.commands.system import init as init_command
 from cryptopilot.cli.commands.system import status as status_command
 from cryptopilot.cli.commands.system import version as version_command
@@ -54,10 +55,10 @@ def main(
     setup_logging(verbose)
 
 
-# Top-level commands
 app.command(name="version")(version_command)
 app.command(name="init")(init_command)
 app.command(name="status")(status_command)
 app.command(name="collect")(collect_command)
+app.add_typer(portfolio_app, name="portfolio")
 
 __all__ = ["app"]
