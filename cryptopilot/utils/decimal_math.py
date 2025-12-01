@@ -7,7 +7,7 @@ from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
 PRICE_PRECISION = Decimal("0.00000001")  # 8 decimal places (crypto standard)
 QUANTITY_PRECISION = Decimal("0.00000001")  # 8 decimal places
-USDT_PRECISION = Decimal("0.01")  # 2 decimal places for USDT
+USD_PRECISION = Decimal("0.01")  # 2 decimal places for USD
 
 
 class DecimalError(Exception):
@@ -71,15 +71,15 @@ def round_quantity(value: Decimal, precision: Decimal = QUANTITY_PRECISION) -> D
     return value.quantize(precision, rounding=ROUND_HALF_UP)
 
 
-def round_usdt(value: Decimal, precision: Decimal = USDT_PRECISION) -> Decimal:
-    """Round USDT amount to specified precision.
+def round_usd(value: Decimal, precision: Decimal = USD_PRECISION) -> Decimal:
+    """Round USD amount to specified precision.
 
     Args:
-        value: USDT amount to round
+        value: USD amount to round
         precision: Precision level (default: 2 decimals)
 
     Returns:
-        Rounded USDT amount
+        Rounded USD amount
 
     """
     return value.quantize(precision, rounding=ROUND_HALF_UP)
@@ -98,12 +98,12 @@ def calculate_total_cost(
         fee: Transaction fee
 
     Returns:
-        Total cost in USDT
+        Total cost in USD
 
     """
     subtotal = quantity * price
     total = subtotal + fee
-    return round_usdt(total)
+    return round_usd(total)
 
 
 def calculate_average_cost_basis(
@@ -158,15 +158,13 @@ def calculate_unrealized_pnl(
     cost = quantity * cost_basis
     value = quantity * current_price
 
-    absolute_pnl = round_usdt(value - cost)
+    absolute_pnl = round_usd(value - cost)
 
     if cost == 0:
         percentage_pnl = Decimal("0")
     else:
         percentage_pnl = ((value - cost) / cost) * 100
-        percentage_pnl = percentage_pnl.quantize(
-            Decimal("0.01"), rounding=ROUND_HALF_UP
-        )
+        percentage_pnl = percentage_pnl.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
     return absolute_pnl, percentage_pnl
 
@@ -195,15 +193,13 @@ def calculate_realized_pnl(
     cost = quantity_sold * cost_basis
     revenue = (quantity_sold * sell_price) - sell_fee
 
-    absolute_pnl = round_usdt(revenue - cost)
+    absolute_pnl = round_usd(revenue - cost)
 
     if cost == 0:
         percentage_pnl = Decimal("0")
     else:
         percentage_pnl = ((revenue - cost) / cost) * 100
-        percentage_pnl = percentage_pnl.quantize(
-            Decimal("0.01"), rounding=ROUND_HALF_UP
-        )
+        percentage_pnl = percentage_pnl.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
     return absolute_pnl, percentage_pnl
 
@@ -223,12 +219,12 @@ def calculate_portfolio_value(
     total = Decimal("0")
 
     for symbol, (quantity, price) in holdings.items():
-        if symbol.upper() == "USDT":
+        if symbol.upper() == "USD":
             total += quantity
         else:
             total += quantity * price
 
-    return round_usdt(total)
+    return round_usd(total)
 
 
 def is_dust(quantity: Decimal, min_threshold: Decimal = Decimal("0.00000001")) -> bool:

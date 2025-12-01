@@ -15,14 +15,16 @@ CryptoPilot is a modular CLI-based platform for cryptocurrency market analysis w
 ## Features
 
 ### Current (Phase 1)
+
 - ✅ Abstracted data provider architecture (CoinGecko first)
 - ✅ Async SQLite database with decimal precision
 - ✅ Strict Pydantic models with comprehensive validation
 - ✅ Configuration hierarchy (CLI > ENV > TOML > Defaults)
 - ✅ Exponential backoff retry logic for rate limits
-- ✅ USDT-based valuation system
+- ✅ USD-based valuation system
 
 ### Planned
+
 - 🔄 Multi-provider support (CoinMarketCap, Binance)
 - 🔄 Portfolio management with cost basis tracking
 - 🔄 Analysis strategies (trend following, mean reversion, momentum)
@@ -32,6 +34,7 @@ CryptoPilot is a modular CLI-based platform for cryptocurrency market analysis w
 ## Installation
 
 ### Prerequisites
+
 - Python 3.11+
 - pip
 
@@ -64,8 +67,8 @@ cryptopilot config show
 # Collect market data
 cryptopilot collect --symbols BTC,ETH,SOL --timeframe 1d --days 90
 
-# Update portfolio balances (all values in USDT)
-cryptopilot balance update --btc 0.5 --eth 2.0 --usdt 5000
+# Update portfolio balances (all values in USD)
+cryptopilot balance update --btc 0.5 --eth 2.0 --usd 5000
 
 # Record a trade
 cryptopilot trade record --buy ETH --quantity 1.0 --price 2800 --fees 10
@@ -95,6 +98,7 @@ cryptopilot/
 ## Configuration
 
 Configuration follows priority hierarchy:
+
 1. CLI Arguments (highest)
 2. Environment Variables
 3. TOML Configuration File
@@ -125,7 +129,7 @@ llm_model = "gemma2:2b"
 output_format = ["console", "json"]
 
 [currency]
-base_currency = "USDT"
+base_currency = "USD"
 ```
 
 ### Environment Variables
@@ -145,7 +149,9 @@ export CRYPTOPILOT_DEBUG=true
 ## Architecture Highlights
 
 ### Decimal Precision
+
 All monetary values stored as `TEXT` in database to prevent floating-point errors:
+
 ```python
 # ✅ Correct
 price = Decimal("42000.50")
@@ -155,24 +161,30 @@ price = 42000.50  # Float precision issues
 ```
 
 ### Provider Abstraction
+
 Easy to add new data providers:
+
 ```python
 class NewProvider(DataProviderBase):
     async def get_ohlcv(self, symbol: str, ...) -> list[OHLCV]:
         # Implement provider-specific logic
-        # Must return normalized XXX/USDT data
+        # Must return normalized XXX/USD data
         pass
 ```
 
 ### Async-First
+
 All I/O operations are async for better performance:
+
 ```python
 async with db.get_connection() as conn:
     await conn.execute(query, params)
 ```
 
 ### Strict Typing
+
 Comprehensive type hints with mypy strict mode:
+
 ```python
 def calculate_cost_basis(
     trades: list[TradeRecord],
@@ -183,16 +195,19 @@ def calculate_cost_basis(
 ## Development
 
 ### Run Tests
+
 ```bash
 pytest tests/ -v
 ```
 
 ### Type Checking
+
 ```bash
 mypy cryptopilot/
 ```
 
 ### Code Formatting
+
 ```bash
 black cryptopilot/
 ruff check cryptopilot/
@@ -201,6 +216,7 @@ ruff check cryptopilot/
 ## Database Schema
 
 ### Core Tables
+
 - `market_data` - OHLCV data with provider tracking
 - `trades` - Trade history with cost tracking
 - `balance_snapshots` - Portfolio state over time
@@ -208,6 +224,7 @@ ruff check cryptopilot/
 - `strategy_performance` - Backtest results
 
 All tables use:
+
 - UTC timestamps (ISO 8601)
 - Decimal values stored as TEXT
 - Comprehensive indexing
@@ -215,17 +232,20 @@ All tables use:
 ## Safety Features
 
 ### Financial Integrity
+
 - Strict decimal arithmetic (no floats)
 - Transaction validation
 - Atomic database operations
 - Comprehensive error handling
 
 ### Rate Limit Protection
+
 - Exponential backoff
 - Provider-specific retry logic
 - Graceful degradation
 
 ### Data Quality
+
 - Gap detection
 - Integrity checks
 - Validation at every layer
@@ -233,6 +253,7 @@ All tables use:
 ## Roadmap
 
 ### Phase 1: Foundation (Current)
+
 - [x] Database schema and connection
 - [x] Configuration system
 - [x] Provider abstraction
@@ -240,18 +261,21 @@ All tables use:
 - [ ] Basic CLI commands
 
 ### Phase 2: Analysis
+
 - [ ] Multiple data providers
 - [ ] Analysis strategies
 - [ ] Portfolio tracking
 - [ ] Cost basis calculation
 
 ### Phase 3: Intelligence
+
 - [ ] LLM integration
 - [ ] Enhanced reporting
 - [ ] Historical comparisons
 - [ ] Risk assessment
 
 ### Phase 4: Production
+
 - [ ] Comprehensive testing
 - [ ] Performance optimization
 - [ ] Documentation
@@ -274,4 +298,3 @@ GNU GPL 3 License - See LICENSE file for details
 - Documentation: [Coming soon]
 - Issues: GitHub Issues
 - Discussions: GitHub Discussions
-

@@ -60,15 +60,13 @@ class ReportingConfig(BaseSettings):
 class CurrencyConfig(BaseSettings):
     """Currency configuration."""
 
-    base_currency: str = "USDT"
+    base_currency: str = "USD"
 
 
 class DatabaseConfig(BaseSettings):
     """Database configuration."""
 
-    path: Path = Field(
-        default_factory=lambda: Path.home() / ".cryptopilot" / "cryptopilot.db"
-    )
+    path: Path = Field(default_factory=lambda: Path.home() / ".cryptopilot" / "cryptopilot.db")
     schema_path: Path = Field(
         default_factory=lambda: Path(__file__).parent.parent / "database" / "schema.sql"
     )

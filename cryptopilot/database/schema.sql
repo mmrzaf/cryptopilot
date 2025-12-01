@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS schema_version (
 CREATE TABLE IF NOT EXISTS market_data (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     symbol TEXT NOT NULL,              -- e.g., 'BTC', 'ETH'
-    base_currency TEXT NOT NULL DEFAULT 'USDT',
+    base_currency TEXT NOT NULL DEFAULT 'USD',
     timestamp TEXT NOT NULL,           -- ISO 8601 UTC
     open TEXT NOT NULL,                -- DECIMAL as TEXT
     high TEXT NOT NULL,                -- DECIMAL as TEXT
@@ -39,9 +39,9 @@ CREATE TABLE IF NOT EXISTS trades (
     symbol TEXT NOT NULL,
     side TEXT NOT NULL CHECK(side IN ('BUY', 'SELL')),
     quantity TEXT NOT NULL,            -- DECIMAL as TEXT
-    price TEXT NOT NULL,               -- DECIMAL as TEXT (in USDT)
-    fee TEXT NOT NULL DEFAULT '0',     -- DECIMAL as TEXT (in USDT)
-    total_cost TEXT NOT NULL,          -- DECIMAL as TEXT (in USDT)
+    price TEXT NOT NULL,               -- DECIMAL as TEXT (in USD)
+    fee TEXT NOT NULL DEFAULT '0',     -- DECIMAL as TEXT (in USD)
+    total_cost TEXT NOT NULL,          -- DECIMAL as TEXT (in USD)
     timestamp TEXT NOT NULL,           -- ISO 8601 UTC
     notes TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now', 'utc'))
@@ -59,7 +59,7 @@ CREATE TABLE IF NOT EXISTS balance_snapshots (
     snapshot_id TEXT UNIQUE NOT NULL,  -- UUID
     symbol TEXT NOT NULL,
     quantity TEXT NOT NULL,            -- DECIMAL as TEXT
-    cost_basis TEXT,                   -- DECIMAL as TEXT (in USDT, nullable for USDT itself)
+    cost_basis TEXT,                   -- DECIMAL as TEXT (in USD, nullable for USD itself)
     timestamp TEXT NOT NULL DEFAULT (datetime('now', 'utc')),
     notes TEXT
 );
@@ -131,4 +131,4 @@ CREATE INDEX IF NOT EXISTS idx_system_events_timestamp
 
 -- Insert initial schema version
 INSERT OR IGNORE INTO schema_version (version, description)
-VALUES (1, 'Initial schema with USDT-based decimal storage');
+VALUES (1, 'Initial schema with USD-based decimal storage');

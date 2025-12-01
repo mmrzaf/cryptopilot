@@ -84,9 +84,9 @@ llm_api_key = ""
 # Currency Configuration
 # ============================================================================
 [currency]
-# Base currency for all valuations (USDT in Phase 1)
-# Note: All fiat amounts must be manually converted to USDT before input
-base_currency = "USDT"
+# Base currency for all valuations (USD in Phase 1)
+# Note: All fiat amounts must be manually converted to USD before input
+base_currency = "USD"
 
 # ============================================================================
 # Global Settings
