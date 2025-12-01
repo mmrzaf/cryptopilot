@@ -4,6 +4,7 @@ import typer
 from rich.console import Console
 from rich.logging import RichHandler
 
+from cryptopilot.cli.commands.analyze import app as analyze_app
 from cryptopilot.cli.commands.collect import collect_command
 from cryptopilot.cli.commands.portfolio import app as portfolio_app
 from cryptopilot.cli.commands.system import init as init_command
@@ -60,5 +61,6 @@ app.command(name="init")(init_command)
 app.command(name="status")(status_command)
 app.command(name="collect")(collect_command)
 app.add_typer(portfolio_app, name="portfolio")
+app.add_typer(analyze_app, name="analyze")
 
 __all__ = ["app"]
