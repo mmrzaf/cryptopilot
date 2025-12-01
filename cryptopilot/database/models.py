@@ -107,6 +107,7 @@ class TradeRecord(BaseModel):
     fee: Decimal = Field(ge=0, default=Decimal("0"))
     total_cost: Decimal = Field(gt=0)
     timestamp: datetime
+    account: str = Field(default="default", min_length=1, max_length=50)  # NEW
     notes: str | None = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
@@ -125,6 +126,27 @@ class TradeRecord(BaseModel):
                 raise ValueError(f"Total cost {v} does not match calculation {expected}")
         return v
 
+class Position(BaseModel):
+    """Derived position from trade history."""
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    symbol: str
+    quantity: Decimal = Field(ge=0)
+    cost_basis: Decimal = Field(gt=0)  # Average cost per unit
+    total_cost: Decimal = Field(ge=0)  # Total amount invested
+    account: str = Field(default="default")
+    first_trade: datetime
+    last_trade: datetime
+    trade_count: int = Field(gt=0)
+
+
+class PositionWithMarketData(Position):
+    """Position enriched with current market price and P&L."""
+    current_price: Decimal = Field(gt=0)
+    market_value: Decimal = Field(ge=0)
+    unrealized_pnl: Decimal
+    unrealized_pnl_pct: Decimal
+    price_updated_at: datetime
 
 class BalanceSnapshotRecord(BaseModel):
     """Balance snapshot record."""
