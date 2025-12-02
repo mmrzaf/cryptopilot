@@ -44,6 +44,8 @@ async def _run_collect(
     days: int,
     update_all: bool,
     provider_name: str,
+    continue_on_error: bool,
+    fill_gaps: bool,
     dry_run: bool,
 ) -> None:
     settings = get_settings()
@@ -93,6 +95,7 @@ async def _run_collect(
         timeframe=timeframe,
         lookback_days=days,
         update_all=update_all,
+        continue_on_error=continue_on_error,
         dry_run=dry_run,
     )
 
@@ -102,8 +105,7 @@ async def _run_collect(
         if dry_run:
             console.print("[yellow]DRY RUN:[/yellow] no data was written to the database.")
         return
-
-    if settings.data.gap_fill_check:
+    if not (settings.data.gap_fill_check or fill_gaps):
         gap_filler = GapFiller(
             repository=repo,
             provider=provider,
@@ -120,11 +122,19 @@ async def _run_collect(
 
         for symbol in symbols:
             try:
-                check = await gap_filler.detect_gaps_recent(
-                    symbol=symbol,
-                    timeframe=timeframe,
-                    lookback_days=days,
-                )
+                if fill_gaps:
+                    check, inserted = await gap_filler.fill_gaps_recent(
+                        symbol=symbol,
+                        timeframe=timeframe,
+                        lookback_days=days,
+                        dry_run=dry_run,
+                    )
+                else:
+                    check = await gap_filler.detect_gaps_recent(
+                        symbol=symbol,
+                        timeframe=timeframe,
+                        lookback_days=days,
+                    )
             except Exception as exc:
                 logger.exception("Gap check failed for %s: %s", symbol, exc)
                 console.print(f"[red]Gap check failed for {symbol}: {exc}[/red]")
@@ -222,6 +232,8 @@ def collect_command(
                 timeframe=tf,
                 days=lookback_days,
                 update_all=update_all,
+                continue_on_error=continue_on_error,
+                fill_gaps=fill_gaps,
                 provider_name=provider_name,
                 dry_run=dry_run,
             )
