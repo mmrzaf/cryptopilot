@@ -1,4 +1,3 @@
-# cryptopilot/cli/commands/system.py
 from __future__ import annotations
 
 import asyncio
@@ -6,6 +5,7 @@ from pathlib import Path
 
 from rich.console import Console
 
+from cryptopilot import __version__
 from cryptopilot.config.settings import get_settings
 from cryptopilot.database.connection import DatabaseConnection
 
@@ -14,7 +14,7 @@ console = Console()
 
 def version() -> None:
     """Show version information."""
-    console.print("[bold cyan]CryptoPilot[/bold cyan] v0.1.0")
+    console.print(f"[bold cyan]CryptoPilot[/bold cyan] v{__version__}")
     console.print("Your cryptocurrency market co-pilot")
 
 
@@ -45,12 +45,16 @@ def init() -> None:
         console.print(f"Created config file: {config_path}")
     else:
         console.print(f"Config file already exists: {config_path}")
-
     console.print("\n[bold green]✓ Initialization complete![/bold green]")
     console.print("\nNext steps:")
-    console.print("1. Edit config: [cyan]cryptopilot config show[/cyan]")
+    console.print("1. Edit config file: [cyan]~/.cryptopilot/config.toml[/cyan]")
     console.print("2. Collect data: [cyan]cryptopilot collect --symbols BTC,ETH[/cyan]")
-    console.print("3. Update portfolio: [cyan]cryptopilot balance update --btc 0.1[/cyan]")
+    console.print(
+        "3. Record a trade: [cyan]"
+        "cryptopilot portfolio trade BTC BUY 0.05 65000 "
+        "--fee 5 --account main --notes 'Bought the dip, allegedly'"
+        "[/cyan]"
+    )
 
 
 def status() -> None:
