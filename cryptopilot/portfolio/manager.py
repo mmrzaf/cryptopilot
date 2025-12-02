@@ -4,7 +4,6 @@ import logging
 from collections import defaultdict
 from datetime import UTC, datetime
 from decimal import Decimal
-from uuid import UUID
 
 from cryptopilot.database.connection import DatabaseConnection
 from cryptopilot.database.models import (
@@ -26,11 +25,13 @@ logger = logging.getLogger(__name__)
 
 class PortfolioError(Exception):
     """Portfolio operation errors."""
+
     pass
 
 
 class InsufficientBalanceError(PortfolioError):
     """Raised when trying to sell more than owned."""
+
     pass
 
 
@@ -100,8 +101,7 @@ class PortfolioManager:
             position = await self.get_position(symbol, account)
             if position and position.quantity < quantity:
                 raise InsufficientBalanceError(
-                    f"Cannot sell {quantity} {symbol}. "
-                    f"Current position: {position.quantity}"
+                    f"Cannot sell {quantity} {symbol}. Current position: {position.quantity}"
                 )
 
         trade = TradeRecord(
@@ -279,8 +279,7 @@ class PortfolioManager:
 
             if price_data is None:
                 logger.warning(
-                    f"No market data found for {symbol}. "
-                    "Run 'cryptopilot collect' to fetch prices."
+                    f"No market data found for {symbol}. Run 'cryptopilot collect' to fetch prices."
                 )
                 continue
 

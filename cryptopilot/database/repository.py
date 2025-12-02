@@ -1,9 +1,18 @@
+import json
 from collections.abc import Sequence
 from datetime import UTC, datetime
 from decimal import Decimal
 
 from cryptopilot.database.connection import DatabaseConnection, decimal_to_str, str_to_decimal
-from cryptopilot.database.models import MarketDataRecord, Timeframe, TradeRecord, TradeSide
+from cryptopilot.database.models import (
+    ActionType,
+    AnalysisResultRecord,
+    ConfidenceLevel,
+    MarketDataRecord,
+    Timeframe,
+    TradeRecord,
+    TradeSide,
+)
 
 
 def _to_utc(dt: datetime) -> datetime:
@@ -163,6 +172,29 @@ class Repository:
                 raise TypeError(f"Unsupported timestamp type from DB: {type(ts)!r}")
         return timestamps
 
+    async def get_ohlcv_rows(
+        self,
+        symbol: str,
+        timeframe: Timeframe,
+        provider: str,
+    ) -> list[dict[str, object]]:
+        """Return OHLCV rows for a symbol/timeframe/provider sorted by timestamp.
+
+        The rows contain: timestamp, open, high, low, close, volume.
+        """
+        query = """
+            SELECT timestamp, open, high, low, close, volume
+            FROM market_data
+            WHERE symbol = ? AND timeframe = ? AND provider = ?
+            ORDER BY timestamp ASC
+        """
+
+        rows = await self._db.fetch_all(
+            query,
+            (symbol.upper(), timeframe.value, provider),
+        )
+
+        return [dict(row) for row in rows]
 
     async def insert_trade(self, trade: TradeRecord) -> int:
         """Insert a trade record.
@@ -284,3 +316,222 @@ class Repository:
         timestamp = datetime.fromisoformat(row["timestamp"])
 
         return price, _to_utc(timestamp)
+
+    async def insert_result(self, result: AnalysisResultRecord) -> int:
+        """Insert analysis result.
+
+        Args:
+            result: AnalysisResultRecord to insert
+
+        Returns:
+            Row ID of inserted record
+        """
+        query = """
+            INSERT INTO analysis_results (
+                analysis_id, symbol, strategy, action, confidence,
+                confidence_score, evidence, risk_assessment,
+                timestamp, market_context
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """
+
+        # Serialize complex fields to JSON
+        evidence_json = json.dumps(result.evidence)
+        risk_json = (
+            json.dumps(result.risk_assessment, default=str) if result.risk_assessment else None
+        )
+        context_json = (
+            json.dumps(result.market_context, default=str) if result.market_context else None
+        )
+
+        cursor = await self._db.execute(
+            query,
+            (
+                str(result.analysis_id),
+                result.symbol.upper(),
+                result.strategy,
+                result.action.value,
+                result.confidence.value,
+                decimal_to_str(result.confidence_score),
+                evidence_json,
+                risk_json,
+                _to_utc(result.timestamp).isoformat(),
+                context_json,
+            ),
+        )
+
+        return cursor.lastrowid or 0
+
+    async def get_latest_result(
+        self,
+        symbol: str,
+        strategy: str | None = None,
+    ) -> AnalysisResultRecord | None:
+        """Get most recent analysis result for a symbol.
+
+        Args:
+            symbol: Cryptocurrency symbol
+            strategy: Optional strategy filter
+
+        Returns:
+            Latest AnalysisResultRecord or None
+        """
+        if strategy:
+            query = """
+                SELECT * FROM analysis_results
+                WHERE symbol = ? AND strategy = ?
+                ORDER BY timestamp DESC
+                LIMIT 1
+            """
+            params = (symbol.upper(), strategy)
+        else:
+            query = """
+                SELECT * FROM analysis_results
+                WHERE symbol = ?
+                ORDER BY timestamp DESC
+                LIMIT 1
+            """
+            params = (symbol.upper(),)
+
+        row = await self._db.fetch_one(query, params)
+
+        if row is None:
+            return None
+
+        return self._row_to_record(row)
+
+    async def list_results(
+        self,
+        symbol: str | None = None,
+        strategy: str | None = None,
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
+        limit: int | None = None,
+    ) -> list[AnalysisResultRecord]:
+        """Query analysis results with filters.
+
+        Args:
+            symbol: Filter by symbol
+            strategy: Filter by strategy
+            start_date: Filter results after this date
+            end_date: Filter results before this date
+            limit: Maximum results to return
+
+        Returns:
+            List of AnalysisResultRecords sorted by timestamp desc
+        """
+        conditions = []
+        params: list[str] = []
+
+        if symbol:
+            conditions.append("symbol = ?")
+            params.append(symbol.upper())
+
+        if strategy:
+            conditions.append("strategy = ?")
+            params.append(strategy)
+
+        if start_date:
+            conditions.append("timestamp >= ?")
+            params.append(_to_utc(start_date).isoformat())
+
+        if end_date:
+            conditions.append("timestamp <= ?")
+            params.append(_to_utc(end_date).isoformat())
+
+        where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+        limit_clause = f"LIMIT {limit}" if limit else ""
+
+        query = f"""
+            SELECT * FROM analysis_results
+            {where_clause}
+            ORDER BY timestamp DESC
+            {limit_clause}
+        """
+
+        rows = await self._db.fetch_all(query, tuple(params) if params else None)
+
+        return [self._row_to_record(row) for row in rows]
+
+    async def get_results_by_action(
+        self,
+        action: ActionType,
+        start_date: datetime | None = None,
+        limit: int = 50,
+    ) -> list[AnalysisResultRecord]:
+        """Get results filtered by action type.
+
+        Args:
+            action: BUY, SELL, or HOLD
+            start_date: Optional start date filter
+            limit: Maximum results
+
+        Returns:
+            List of results with matching action
+        """
+        if start_date:
+            query = """
+                SELECT * FROM analysis_results
+                WHERE action = ? AND timestamp >= ?
+                ORDER BY timestamp DESC
+                LIMIT ?
+            """
+            params = (action.value, _to_utc(start_date).isoformat(), limit)
+        else:
+            query = """
+                SELECT * FROM analysis_results
+                WHERE action = ?
+                ORDER BY timestamp DESC
+                LIMIT ?
+            """
+            params = (action.value, limit)
+
+        rows = await self._db.fetch_all(query, params)
+        return [self._row_to_record(row) for row in rows]
+
+    def _row_to_record(self, row: object) -> AnalysisResultRecord:
+        """Convert database row to AnalysisResultRecord.
+
+        Args:
+            row: Database row from aiosqlite
+
+        Returns:
+            AnalysisResultRecord
+        """
+        # Parse JSON fields
+        evidence = json.loads(row["evidence"]) if row["evidence"] else []
+
+        risk_assessment = None
+        if row["risk_assessment"]:
+            risk_data = json.loads(row["risk_assessment"])
+            # Convert string decimals back to Decimal
+            risk_assessment = {
+                k: Decimal(v)
+                if isinstance(v, str) and v.replace(".", "").replace("-", "").isdigit()
+                else v
+                for k, v in risk_data.items()
+            }
+
+        market_context = None
+        if row["market_context"]:
+            ctx_data = json.loads(row["market_context"])
+            market_context = {
+                k: Decimal(v)
+                if isinstance(v, str) and v.replace(".", "").replace("-", "").isdigit()
+                else v
+                for k, v in ctx_data.items()
+            }
+
+        return AnalysisResultRecord(
+            id=row["id"],
+            analysis_id=row["analysis_id"],
+            symbol=row["symbol"],
+            strategy=row["strategy"],
+            action=ActionType(row["action"]),
+            confidence=ConfidenceLevel(row["confidence"]),
+            confidence_score=str_to_decimal(row["confidence_score"]),
+            evidence=evidence,
+            risk_assessment=risk_assessment,
+            timestamp=datetime.fromisoformat(row["timestamp"]),
+            market_context=market_context,
+        )

@@ -61,6 +61,7 @@ class MarketDataCollector:
         timeframe: Timeframe,
         lookback_days: int,
         update_all: bool = False,
+        continue_on_error: bool = False,
         dry_run: bool = False,
     ) -> list[CollectionResult]:
         """Collect data for multiple symbols.
@@ -93,8 +94,9 @@ class MarketDataCollector:
                 results.append(result)
             except Exception as exc:
                 logger.exception("Failed to collect data for %s: %s", symbol, exc)
-                # One failure stops entire collection run as per spec.
-                raise
+                if not continue_on_error:
+                    raise
+                continue
 
         return results
 

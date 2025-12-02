@@ -221,7 +221,7 @@ def show_pnl() -> None:
         console.print(f"Total Value: ${summary['total_value']:,.2f}")
         console.print(f"Total Cost:  ${summary['total_cost']:,.2f}")
 
-        pnl_color = "green" if summary['total_pnl'] >= 0 else "red"
+        pnl_color = "green" if summary["total_pnl"] >= 0 else "red"
         console.print(
             f"Total P&L:   [{pnl_color}]${summary['total_pnl']:+,.2f} "
             f"({summary['total_pnl_pct']:+.2f}%)[/{pnl_color}]"
