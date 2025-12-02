@@ -105,7 +105,10 @@ async def _run_collect(
         if dry_run:
             console.print("[yellow]DRY RUN:[/yellow] no data was written to the database.")
         return
+
     if not (settings.data.gap_fill_check or fill_gaps):
+        return
+    else:
         gap_filler = GapFiller(
             repository=repo,
             provider=provider,
