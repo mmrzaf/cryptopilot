@@ -172,6 +172,30 @@ class Repository:
                 raise TypeError(f"Unsupported timestamp type from DB: {type(ts)!r}")
         return timestamps
 
+    async def get_ohlcv_rows(
+        self,
+        symbol: str,
+        timeframe: Timeframe,
+        provider: str,
+    ) -> list[dict[str, object]]:
+        """Return OHLCV rows for a symbol/timeframe/provider sorted by timestamp.
+
+        The rows contain: timestamp, open, high, low, close, volume.
+        """
+        query = """
+            SELECT timestamp, open, high, low, close, volume
+            FROM market_data
+            WHERE symbol = ? AND timeframe = ? AND provider = ?
+            ORDER BY timestamp ASC
+        """
+
+        rows = await self._db.fetch_all(
+            query,
+            (symbol.upper(), timeframe.value, provider),
+        )
+
+        return [dict(row) for row in rows]
+
     async def insert_trade(self, trade: TradeRecord) -> int:
         """Insert a trade record.
 

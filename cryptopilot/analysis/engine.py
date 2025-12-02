@@ -1,7 +1,7 @@
 """Analysis engine - orchestrates data fetching, strategy execution, and result storage."""
 
 import logging
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import pandas as pd
 
@@ -196,9 +196,8 @@ class AnalysisEngine:
         Returns:
             List of AnalysisResultRecords
         """
-        start_date = datetime.now(UTC).replace(hour=0, minute=0, second=0)
-        start_date = start_date.replace(day=start_date.day - days)
-
+        now = datetime.now(UTC)
+        start_date = (now - timedelta(days=days)).replace(hour=0, minute=0, second=0, microsecond=0)
         return await self._repo.list_results(
             symbol=symbol,
             strategy=strategy,
@@ -227,17 +226,11 @@ class AnalysisEngine:
         Raises:
             InsufficientDataError: If not enough data available
         """
-        # Query database for market data
-        query = """
-            SELECT timestamp, open, high, low, close, volume
-            FROM market_data
-            WHERE symbol = ? AND timeframe = ? AND provider = ?
-            ORDER BY timestamp ASC
-        """
-
-        rows = await self._repo._db.fetch_all(
-            query,
-            (symbol, timeframe.value, provider),
+        # Fetch OHLCV rows via repository (all SQL lives in Repository)
+        rows = await self._repo.get_ohlcv_rows(
+            symbol=symbol,
+            timeframe=timeframe,
+            provider=provider,
         )
 
         if not rows:
@@ -248,7 +241,9 @@ class AnalysisEngine:
 
         if len(rows) < min_candles:
             raise InsufficientDataError(f"Need {min_candles} candles, only {len(rows)} available")
-        data = pd.DataFrame([dict(row) for row in rows])
+
+        data = pd.DataFrame(rows)
+
         # Convert timestamp strings to datetime
         data["timestamp"] = pd.to_datetime(data["timestamp"])
 
