@@ -1,122 +1,289 @@
 # CryptoPilot
 
-> Your cryptocurrency market co-pilot for data-driven trading analysis
+> Turn messy crypto market data into clear, explainable trading calls
 
-**Status**: Phase 1 - Foundation Development
+**Status:** Early alpha – `0.0.5` (foundation in progress)  
+**Scope right now:** Technical-only, OHLCV-based engine + portfolio tracking. Whale data, exchange flows, decision engine, and backtesting are planned but not implemented yet.
 
-## Overview
+---
 
-CryptoPilot is a modular CLI-based platform for cryptocurrency market analysis with personalized portfolio insights and AI-powered reporting. Built with strict typing, async-first architecture, and robust data handling.
+## What CryptoPilot is
 
-## Core Philosophy
+CryptoPilot is a CLI-first platform that:
 
-**"Collect once, analyze many ways"** - A robust data collection foundation with pluggable data sources and analysis strategies, always explaining the "why" behind every suggestion.
+- Collects and stores crypto market data in a **local, queryable database**.
+- Runs **pluggable analysis strategies** (trend-following, mean-reversion, momentum) on that data.
+- Tracks your trades and positions with proper **Decimal-safe accounting**.
+- Prepares the ground for a full **decision engine** that will combine:
+  - Technicals
+  - Whale / on-chain flows
+  - Exchange flow / microstructure
+  - Portfolio context and risk profile
 
-## Features
+Right now, it’s a solid **technical analysis + portfolio toolkit** with a lot of infrastructure already in place for the bigger vision.
 
-### Current (Phase 1)
+For the long-term vision and design, see [`ROADMAP.md`](./ROADMAP.md).
 
-- ✅ Abstracted data provider architecture (CoinGecko first)
-- ✅ Async SQLite database with decimal precision
-- ✅ Strict Pydantic models with comprehensive validation
-- ✅ Configuration hierarchy (CLI > ENV > TOML > Defaults)
-- ✅ Exponential backoff retry logic for rate limits
-- ✅ USD-based valuation system
+---
 
-### Planned
+## Features (0.0.5)
 
-- 🔄 Multi-provider support (CoinMarketCap, Binance)
-- 🔄 Portfolio management with cost basis tracking
-- 🔄 Analysis strategies (trend following, mean reversion, momentum)
-- 🔄 LLM-enhanced reporting (Ollama, OpenAI, etc.)
-- 🔄 Gap detection and automatic data filling
+### Implemented today
+
+**Data platform**
+
+- Async SQLite database with schema for:
+  - `market_data` (OHLCV candles)
+  - `trades` and `balance_snapshots`
+  - `analysis_results` and `strategy_performance`
+  - `data_quality_log` and `system_events`
+- All monetary values stored as `TEXT` (stringified `Decimal`) – no float money.
+- Integrity checks and schema versioning.
+
+**Provider + collection**
+
+- Provider abstraction (`DataProviderBase`) with a registry.
+- CoinGecko provider implementation.
+- Market data collector:
+  - Figures out collection windows per symbol/timeframe.
+  - Handles retries/backoff for provider errors.
+  - Bulk inserts OHLCV candles into the DB.
+- Gap detection + optional gap filling for missing candles.
+
+**Analysis engine (technical-only)**
+
+- Indicator library:
+  - SMA, EMA, RSI, Bollinger Bands, MACD, volatility, ATR, trend helpers, crossovers.
+- Strategy framework:
+  - Base strategy class with standardized `AnalysisResult` (action, confidence, evidence, risk/context).
+  - Built-in strategies:
+    - `trend_following`
+    - `mean_reversion`
+    - `momentum`
+- Analysis engine:
+  - Loads OHLCV data from DB into pandas.
+  - Validates data length vs strategy requirements.
+  - Runs a chosen strategy and stores results.
+
+**Portfolio engine**
+
+- Trade recording with validation (including “don’t sell more than you own” safeguard).
+- Position construction from trade history (average cost basis).
+- Unrealized P&L calculation using latest stored market prices.
+- Portfolio summary:
+  - Total value, cost, P&L, and P&L %.
+
+**CLI**
+
+Top-level entry point: `cryptopilot`
+
+Subcommands:
+
+- `cryptopilot init`
+  - Create `~/.cryptopilot` directory.
+  - Initialize SQLite DB with schema.
+  - Generate default `config.toml` if missing.
+- `cryptopilot status`
+  - Check DB initialization and integrity.
+  - Show key config values.
+- `cryptopilot collect`
+  - Collect OHLCV for one or more symbols from the configured provider.
+  - Supports:
+    - `--symbols` / `--timeframe` / `--days`
+    - `--update-all` (append from last candle)
+    - `--dry-run` (do everything except writing to DB)
+- `cryptopilot analyze run`
+  - Run a single strategy on one symbol.
+  - Prints action (BUY/SELL/HOLD), confidence, score, evidence, risk/context.
+- `cryptopilot analyze portfolio`
+  - Run a strategy across multiple symbols and show them in a table.
+- `cryptopilot analyze history`
+  - Show recent analysis results from the DB.
+- `cryptopilot analyze strategies`
+  - List all registered strategies and their required periods.
+- `cryptopilot analyze compare`
+  - Run all strategies on a single symbol and compare their outputs.
+- `cryptopilot portfolio trade`
+  - Record BUY/SELL trades with quantity, price, fee, account, notes.
+- `cryptopilot portfolio list`
+  - Show recent trades.
+- `cryptopilot portfolio positions`
+  - Show current positions (quantity, average cost, total cost, trade count).
+- `cryptopilot portfolio pnl`
+  - Show positions with current price, market value, and unrealized P&L + a portfolio summary.
+
+---
+
+## Not implemented yet (but designed)
+
+These are part of the blueprint and roadmap, but you shouldn’t expect them to work today:
+
+- Whale / on-chain metric series and factors.
+- Exchange flow (venue-level) metric series and factors.
+- Explicit **MetricSeries** abstraction for all data types (not just OHLCV).
+- Full **decision & risk engine** that combines multiple strategy signals, user profile, and portfolio into a single decision plan per symbol.
+- Rich user profiles (risk level, attention profile, allocation rules, preferences).
+- Backtesting and strategy performance analytics.
+- Report generator + LLM-based narrative reports.
+- Dedicated `decide` and `report` CLI commands.
+- API / UI layer on top of the same core.
+
+See `ROADMAP.md` for how these arrive over 0.1.x–0.5.x and 1.0.0.
+
+---
 
 ## Installation
 
-### Prerequisites
+### Requirements
 
 - Python 3.11+
-- pip
+- `pip`
+- SQLite (standard Python build is enough)
 
-### Setup
+### Install from source
 
 ```bash
-# Clone the repository
-git clone https://github.com/yourusername/cryptopilot.git
+# Clone the repo
+git clone https://github.com/mmrzaf/cryptopilot.git
 cd cryptopilot
 
-# Install dependencies
+# Install in editable mode
 pip install -e .
 
-# Or with development dependencies
+# With dev extras (tests, linters, type-checking)
 pip install -e ".[dev]"
+````
 
-# Initialize CryptoPilot
+---
+
+## Quick start
+
+### 1. Initialize CryptoPilot
+
+```bash
 cryptopilot init
 ```
 
-## Quick Start
+This will:
+
+* Create `~/.cryptopilot/`
+* Create `~/.cryptopilot/config.toml`
+* Create and initialize `~/.cryptopilot/cryptopilot.db`
+
+### 2. Check system status
 
 ```bash
-# Check system status
 cryptopilot status
-
-# View current configuration
-cryptopilot config show
-
-# Collect market data
-cryptopilot collect --symbols BTC,ETH,SOL --timeframe 1d --days 90
-
-# Update portfolio balances (all values in USD)
-cryptopilot balance update --btc 0.5 --eth 2.0 --usd 5000
-
-# Record a trade
-cryptopilot trade record --buy ETH --quantity 1.0 --price 2800 --fees 10
-
-# Analyze market
-cryptopilot analyze --symbol BTC --strategies trend_following
-
-# Generate report
-cryptopilot report generate --format console
 ```
 
-## Project Structure
+You should see:
 
+* Database: ✓ Ready
+* Schema version and integrity
+* Default provider, base currency, default symbols, debug mode
+
+### 3. Collect some data
+
+Example: 90 days of daily BTC/ETH candles from the default provider:
+
+```bash
+cryptopilot collect \
+  --symbols BTC,ETH \
+  --timeframe 1d \
+  --days 90
 ```
-cryptopilot/
-├── config/          # Configuration management
-├── database/        # Async SQLite + models
-├── providers/       # Data provider abstractions
-├── collectors/      # Market data collection
-├── portfolio/       # Portfolio management
-├── analysis/        # Analysis strategies
-├── reporting/       # Report generation + LLM
-├── utils/           # Common utilities
-└── cli/             # CLI commands
+
+Dry-run example (see what *would* be fetched, but don’t write to DB):
+
+```bash
+cryptopilot collect \
+  --symbols BTC,ETH \
+  --timeframe 1d \
+  --days 90 \
+  --dry-run
 ```
+
+### 4. Run analysis
+
+Single-symbol, single-strategy:
+
+```bash
+cryptopilot analyze run BTC \
+  --strategy trend_following \
+  --timeframe 1d
+```
+
+Portfolio-level analysis:
+
+```bash
+cryptopilot analyze portfolio \
+  --symbols BTC,ETH,SOL \
+  --strategy momentum \
+  --timeframe 1d
+```
+
+Check strategy catalog:
+
+```bash
+cryptopilot analyze strategies
+```
+
+### 5. Track your portfolio
+
+Record a trade:
+
+```bash
+cryptopilot portfolio trade BTC BUY 0.05 65000 \
+  --fee 5 \
+  --account main \
+  --notes "Bought the dip, allegedly"
+```
+
+List recent trades:
+
+```bash
+cryptopilot portfolio list --limit 20
+```
+
+See current positions:
+
+```bash
+cryptopilot portfolio positions
+```
+
+See unrealized P&L (requires `market_data` for those symbols):
+
+```bash
+cryptopilot portfolio pnl
+```
+
+If P&L shows missing prices, run `cryptopilot collect` for those symbols/timeframes first.
+
+---
 
 ## Configuration
 
-Configuration follows priority hierarchy:
+CryptoPilot uses layered configuration:
 
-1. CLI Arguments (highest)
-2. Environment Variables
-3. TOML Configuration File
-4. Default Values (lowest)
+1. **Environment variables** (`CRYPTOPILOT_*`)
+2. **TOML file** (`~/.cryptopilot/config.toml`)
+3. **Defaults in code**
 
-### Configuration File
+### Config file
 
-Located at `~/.cryptopilot/config.toml`:
+`cryptopilot init` will create a TOML config. A minimal example:
 
 ```toml
 [api]
 default_provider = "coingecko"
-api_key = ""  # Optional for most providers
+api_key = ""
 
 [data]
 default_timeframe = "1d"
 default_symbols = ["BTC", "ETH", "SOL"]
 retention_days = 730
+gap_fill_check = true
+batch_size = 100
 
 [analysis]
 default_strategies = ["trend_following", "mean_reversion"]
@@ -127,174 +294,107 @@ risk_tolerance = "moderate"
 llm_provider = "ollama"
 llm_model = "gemma2:2b"
 output_format = ["console", "json"]
+include_personal_context = true
+llm_api_base = "http://localhost:11434"
+llm_api_key = ""
 
 [currency]
 base_currency = "USD"
+
+debug = false
+log_level = "INFO"
 ```
 
-### Environment Variables
+You can edit this file directly. At 0.0.5 there is no `cryptopilot config` CLI yet; it’s planned as part of the UX/reporting polish work.
+
+### Environment overrides
+
+Examples:
 
 ```bash
-# API Configuration
+# Change default provider
 export CRYPTOPILOT_API__DEFAULT_PROVIDER="coingecko"
+
+# Set API key (for providers that need it)
 export CRYPTOPILOT_API__API_KEY="your-key"
 
-# Analysis Configuration
+# Change risk tolerance
 export CRYPTOPILOT_ANALYSIS__RISK_TOLERANCE="aggressive"
 
-# Debug Mode
+# Enable debug logging
 export CRYPTOPILOT_DEBUG=true
 ```
 
-## Architecture Highlights
+---
 
-### Decimal Precision
+## Architecture (short version)
 
-All monetary values stored as `TEXT` in database to prevent floating-point errors:
+Conceptually, CryptoPilot is moving toward:
 
-```python
-# ✅ Correct
-price = Decimal("42000.50")
+* **Data platform**
 
-# ❌ Wrong
-price = 42000.50  # Float precision issues
-```
+  * Providers (market, whale, exchange flow, later derivatives/macro).
+  * Time-series / MetricSeries storage with validation + gap handling.
+* **Factor engine**
 
-### Provider Abstraction
+  * Derived metrics on top of series (technicals, whale factors, flow factors).
+* **Strategy engine**
 
-Easy to add new data providers:
+  * Strategies that request factors + metrics and emit standardized signals.
+* **Decision & risk engine**
 
-```python
-class NewProvider(DataProviderBase):
-    async def get_ohlcv(self, symbol: str, ...) -> list[OHLCV]:
-        # Implement provider-specific logic
-        # Must return normalized XXX/USD data
-        pass
-```
+  * Aggregates strategy signals + user profile + portfolio into a decision plan.
+* **Portfolio + profile services**
 
-### Async-First
+  * Trades, positions, P&L, allocations, constraints.
+* **Reporting / LLM**
 
-All I/O operations are async for better performance:
+  * Turns structured decisions into human-readable reports.
+* **CLI / API**
 
-```python
-async with db.get_connection() as conn:
-    await conn.execute(query, params)
-```
+  * Commands like `collect`, `portfolio`, `analyze`, `decide`, `report`.
 
-### Strict Typing
+At 0.0.5, the **data platform**, **technical factor layer (indicators)**, **strategy engine**, and **portfolio engine** are real. The MetricSeries generalization, whales/flows, decision engine, and rich reporting are tracked in `ROADMAP.md`.
 
-Comprehensive type hints with mypy strict mode:
-
-```python
-def calculate_cost_basis(
-    trades: list[TradeRecord],
-) -> dict[str, Decimal]:
-    ...
-```
+---
 
 ## Development
 
-### Run Tests
+Run tests:
 
 ```bash
-pytest tests/ -v
+pytest -v
 ```
 
-### Type Checking
+Type-check:
 
 ```bash
 mypy cryptopilot/
 ```
 
-### Code Formatting
+Lint + format:
 
 ```bash
-black cryptopilot/
 ruff check cryptopilot/
+black cryptopilot/
 ```
 
-## Database Schema
-
-### Core Tables
-
-- `market_data` - OHLCV data with provider tracking
-- `trades` - Trade history with cost tracking
-- `balance_snapshots` - Portfolio state over time
-- `analysis_results` - Strategy recommendations
-- `strategy_performance` - Backtest results
-
-All tables use:
-
-- UTC timestamps (ISO 8601)
-- Decimal values stored as TEXT
-- Comprehensive indexing
-
-## Safety Features
-
-### Financial Integrity
-
-- Strict decimal arithmetic (no floats)
-- Transaction validation
-- Atomic database operations
-- Comprehensive error handling
-
-### Rate Limit Protection
-
-- Exponential backoff
-- Provider-specific retry logic
-- Graceful degradation
-
-### Data Quality
-
-- Gap detection
-- Integrity checks
-- Validation at every layer
-
-## Roadmap
-
-### Phase 1: Foundation (Current)
-
-- [x] Database schema and connection
-- [x] Configuration system
-- [x] Provider abstraction
-- [ ] Data collection implementation
-- [ ] Basic CLI commands
-
-### Phase 2: Analysis
-
-- [ ] Multiple data providers
-- [ ] Analysis strategies
-- [ ] Portfolio tracking
-- [ ] Cost basis calculation
-
-### Phase 3: Intelligence
-
-- [ ] LLM integration
-- [ ] Enhanced reporting
-- [ ] Historical comparisons
-- [ ] Risk assessment
-
-### Phase 4: Production
-
-- [ ] Comprehensive testing
-- [ ] Performance optimization
-- [ ] Documentation
-- [ ] CI/CD pipeline
-
-## Contributing
-
-This project is in early development. Contributions welcome!
-
-## License
-
-GNU GPL 3 License - See LICENSE file for details
+---
 
 ## Disclaimer
 
-⚠️ **IMPORTANT**: CryptoPilot is for informational purposes only. It does NOT provide financial advice. All trading decisions are your responsibility. Cryptocurrency trading carries significant risk.
+CryptoPilot is **not** financial advice.
 
-## Support
+* No guarantees.
+* No performance promises.
+* You are responsible for your own trades and risk.
 
-- Documentation: [Coming soon]
-- Issues: GitHub Issues
-- Discussions: GitHub Discussions
+Treat it as a tool for structuring information and decisions, not an oracle.
+
+---
+
+## License
+
+CryptoPilot is licensed under the **GNU GPL 3.0 or later**.
+See the [`LICENSE`](./LICENSE) file for details.
+
